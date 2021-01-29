@@ -1,5 +1,6 @@
 require 'omniauth-oauth2'
 
+# frozen_string_literal: true
 module OmniAuth
   module Strategies
     class WordpressHosted < OmniAuth::Strategies::OAuth2
@@ -8,37 +9,44 @@ module OmniAuth
 
       # This is where you pass the options you would pass when
       # initializing your consumer from the OAuth gem.
-      option :client_options, {  }
-
+      option :client_options, {}
 
       # These are called after authentication has succeeded. If
       # possible, you should try to set the UID without making
       # additional calls (if the user id is returned with the token
       # or as a URI parameter). This may not be possible with all
       # providers.
-      uid{ raw_info['ID'] }
+      uid { raw_info['ID'] }
 
       info do
         {
-            name: raw_info['display_name'],
-            email: raw_info['user_email'],
-            nickname: raw_info['user_nicename'],
-            urls: { "Website" => raw_info['user_url'] }
+          name: raw_info['display_name'],
+          email: raw_info['user_email'],
+          nickname: raw_info['user_nicename'],
+          urls: { 'Website' => raw_info['user_url'] }
         }
       end
 
       extra do
-        { :raw_info => raw_info }
+        { raw_info: raw_info }
       end
 
       def raw_info
         puts access_token.token
         @raw_info ||= access_token.get(
-          "/oauth/request_access",
-          :params => { 'Authorization' =>
-                       "Bearer #{access_token.token}"
-                       }
+          '/oauth/me',
+          params: { 'Authorization' =>
+                       "Bearer #{access_token.token}" }
         ).parsed
+      end
+
+      def callback_url
+        if options.authorization_code_from_signed_request_in_cookie
+          ''
+        else
+          # Fixes regression in omniauth-oauth2 v1.4.0 by https://github.com/intridea/omniauth-oauth2/commit/85fdbe117c2a4400d001a6368cc359d88f40abc7
+          options[:callback_url] || (full_host + script_name + callback_path)
+        end
       end
     end
   end
